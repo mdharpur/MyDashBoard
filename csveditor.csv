@@ -8,13 +8,14 @@ $csvFiles = @{
 # Prompt the user to choose which file to append the data to
 do {
     Write-Host "Choose a CSV file to append data:"
-    $csvFiles.Keys | ForEach-Object { Write-Host ("{0,-5} : {1}" -f $_, $csvFiles[$_]) }
-    $choice = Read-Host "Enter the label of the CSV file (or 'quit' to exit)"
+    $csvFiles.Keys | ForEach-Object { Write-Host "$_ : $($csvFiles[$_])" }
+	Write-Host "0 : Exit"
+    $choice = Read-Host "Enter the label of the CSV file OR '0' to exit)"
     if ($csvFiles.ContainsKey($choice)) {
         $csvFilePath = $csvFiles[$choice]
         break
     }
-    elseif ($choice -eq 'quit') {
+    elseif ($choice -eq '0') {
         exit
     }
     else {
@@ -22,24 +23,27 @@ do {
     }
 } while ($true)
 
-# Read the header row from the CSV file
-$headerRow = Get-Content -Path $csvFilePath -TotalCount 1
-
-# Display the header row to the user
-Write-Host "CSV File Header: $headerRow"
-
 # Prompt the user for data entry or bulk upload
 do {
     Write-Host "Choose an option:"
     Write-Host "1. Bulk upload from a TXT file"
     Write-Host "2. Enter data manually"
-    Write-Host "3. Choose another CSV file"
-    Write-Host "4. Exit"
-    $uploadChoice = Read-Host "Enter the option number"
+	Write-Host "3. Choose another CSV file"
+	Write-Host "0. Exit"
+    $uploadChoice = Read-Host "Enter the choice OR '0' to exit"
 
     if ($uploadChoice -eq '1') {
         # Prompt the user for the TXT file path containing the data to append
         $txtFilePath = Read-Host "Enter the path to the TXT file containing the data to append"
+
+        # Read the header row from the TXT file
+        $headerRow = Get-Content -Path $txtFilePath -TotalCount 1
+
+        # Parse the header row to get the column names
+        $columns = $headerRow -split ','
+
+        # Remove '#' sign from column names
+        $columns = $columns | ForEach-Object { $_ -replace '^#', '' }
 
         # Read the data from the TXT file, ignoring lines starting with '#'
         $txtData = Get-Content -Path $txtFilePath | Where-Object { $_ -notmatch '^#' }
@@ -56,15 +60,15 @@ do {
             $values = $line -split ','
 
             # Prompt the user for input for each column
-            for ($i = 0; $i -lt $headerRow.Count; $i++) {
-                $column = $headerRow[$i]
+            for ($i = 0; $i -lt $columns.Count; $i++) {
+                $column = $columns[$i]
                 $value = $values[$i]
                 $newData[$column] = $value
             }
 
             # Create a custom object with properties based on the column names and user input for each row
             $newRowObject = New-Object -TypeName PSObject
-            foreach ($column in $headerRow) {
+            foreach ($column in $columns) {
                 $newRowObject | Add-Member -MemberType NoteProperty -Name $column -Value $newData[$column]
             }
 
@@ -83,18 +87,24 @@ do {
         Write-Host "Data appended to the CSV file: $csvFilePath"
     }
     elseif ($uploadChoice -eq '2') {
+        # Read the header row from the CSV file
+        $headerRow = Get-Content -Path $csvFilePath -TotalCount 1
+
+        # Parse the header row to get the column names
+        $columns = $headerRow -split ','
+
         # Create an empty hashtable to store user input
         $newData = @{}
 
         # Prompt the user for input for each column
-        foreach ($column in $headerRow) {
+        foreach ($column in $columns) {
             $value = Read-Host "Enter the value for $column"
             $newData[$column] = $value
         }
 
         # Create a custom object with properties based on the column names and user input
         $newRowObject = New-Object -TypeName PSObject
-        foreach ($column in $headerRow) {
+        foreach ($column in $columns) {
             $newRowObject | Add-Member -MemberType NoteProperty -Name $column -Value $newData[$column]
         }
 
@@ -111,17 +121,18 @@ do {
         # Exit after data entry
         exit
     }
-    elseif ($uploadChoice -eq '3') {
+	elseif ($uploadChoice -eq '3') {
         # Prompt the user to choose another CSV file
         do {
             Write-Host "Choose a CSV file to append data:"
-            $csvFiles.Keys | ForEach-Object { Write-Host ("{0,-5} : {1}" -f $_, $csvFiles[$_]) }
-            $choice = Read-Host "Enter the label of the CSV file (or 'quit' to exit)"
+			$csvFiles.Keys | ForEach-Object { Write-Host "$_ : $($csvFiles[$_])" }
+			Write-Host "0 : Exit"
+            $choice = Read-Host "Enter the label of the CSV file OR '0' to exit)"
             if ($csvFiles.ContainsKey($choice)) {
                 $csvFilePath = $csvFiles[$choice]
                 break
             }
-            elseif ($choice -eq 'quit') {
+            elseif ($choice -eq '0') {
                 exit
             }
             else {
@@ -133,9 +144,9 @@ do {
         $headerRow = Get-Content -Path $csvFilePath -TotalCount 1
 
         # Display the header row to the user
-        Write-Host "CSV File Header: $headerRow"
+        Write-Host "CSV File Headers are : $headerRow"
     }
-    elseif ($uploadChoice -eq '4') {
+    elseif ($uploadChoice -eq '0') {
         exit
     }
     else {
