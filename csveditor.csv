@@ -1,0 +1,144 @@
+# Define the CSV file paths with labels
+$csvFiles = @{
+    "1" = "C:\Users\Manish\Documents\rotex.csv"
+    "2" = "C:\Users\Manish\Documents\csvedirot.csv"
+    # Add more CSV files with labels as needed
+}
+
+# Prompt the user to choose which file to append the data to
+do {
+    Write-Host "Choose a CSV file to append data:"
+    $csvFiles.Keys | ForEach-Object { Write-Host ("{0,-5} : {1}" -f $_, $csvFiles[$_]) }
+    $choice = Read-Host "Enter the label of the CSV file (or 'quit' to exit)"
+    if ($csvFiles.ContainsKey($choice)) {
+        $csvFilePath = $csvFiles[$choice]
+        break
+    }
+    elseif ($choice -eq 'quit') {
+        exit
+    }
+    else {
+        Write-Host "Invalid choice. Please try again."
+    }
+} while ($true)
+
+# Read the header row from the CSV file
+$headerRow = Get-Content -Path $csvFilePath -TotalCount 1
+
+# Display the header row to the user
+Write-Host "CSV File Header: $headerRow"
+
+# Prompt the user for data entry or bulk upload
+do {
+    Write-Host "Choose an option:"
+    Write-Host "1. Bulk upload from a TXT file"
+    Write-Host "2. Enter data manually"
+    Write-Host "3. Choose another CSV file"
+    Write-Host "4. Exit"
+    $uploadChoice = Read-Host "Enter the option number"
+
+    if ($uploadChoice -eq '1') {
+        # Prompt the user for the TXT file path containing the data to append
+        $txtFilePath = Read-Host "Enter the path to the TXT file containing the data to append"
+
+        # Read the data from the TXT file, ignoring lines starting with '#'
+        $txtData = Get-Content -Path $txtFilePath | Where-Object { $_ -notmatch '^#' }
+
+        # Create an array to store the new rows
+        $newRows = @()
+
+        # Process each line in the TXT file
+        foreach ($line in $txtData) {
+            # Create an empty hashtable to store user input for each row
+            $newData = @{}
+
+            # Split the line into values using a delimiter (e.g., comma)
+            $values = $line -split ','
+
+            # Prompt the user for input for each column
+            for ($i = 0; $i -lt $headerRow.Count; $i++) {
+                $column = $headerRow[$i]
+                $value = $values[$i]
+                $newData[$column] = $value
+            }
+
+            # Create a custom object with properties based on the column names and user input for each row
+            $newRowObject = New-Object -TypeName PSObject
+            foreach ($column in $headerRow) {
+                $newRowObject | Add-Member -MemberType NoteProperty -Name $column -Value $newData[$column]
+            }
+
+            # Add the new row object to the array of new rows
+            $newRows += $newRowObject
+        }
+
+        # Convert the array of new rows to CSV string
+        $newRowsCsv = $newRows | ConvertTo-Csv -NoTypeInformation | ForEach-Object {
+            $_ -replace '"', ''
+        }
+
+        # Append the new rows to the chosen CSV file
+        $newRowsCsv | Select-Object -Skip 1 | Out-File -Append -FilePath $csvFilePath -Encoding UTF8
+
+        Write-Host "Data appended to the CSV file: $csvFilePath"
+    }
+    elseif ($uploadChoice -eq '2') {
+        # Create an empty hashtable to store user input
+        $newData = @{}
+
+        # Prompt the user for input for each column
+        foreach ($column in $headerRow) {
+            $value = Read-Host "Enter the value for $column"
+            $newData[$column] = $value
+        }
+
+        # Create a custom object with properties based on the column names and user input
+        $newRowObject = New-Object -TypeName PSObject
+        foreach ($column in $headerRow) {
+            $newRowObject | Add-Member -MemberType NoteProperty -Name $column -Value $newData[$column]
+        }
+
+        # Convert the new row object to CSV string
+        $newRowCsv = $newRowObject | ConvertTo-Csv -NoTypeInformation | ForEach-Object {
+            $_ -replace '"', ''
+        }
+
+        # Append the new row to the chosen CSV file
+        $newRowCsv | Select-Object -Skip 1 | Out-File -Append -FilePath $csvFilePath -Encoding UTF8
+
+        Write-Host "Data appended to the CSV file: $csvFilePath"
+
+        # Exit after data entry
+        exit
+    }
+    elseif ($uploadChoice -eq '3') {
+        # Prompt the user to choose another CSV file
+        do {
+            Write-Host "Choose a CSV file to append data:"
+            $csvFiles.Keys | ForEach-Object { Write-Host ("{0,-5} : {1}" -f $_, $csvFiles[$_]) }
+            $choice = Read-Host "Enter the label of the CSV file (or 'quit' to exit)"
+            if ($csvFiles.ContainsKey($choice)) {
+                $csvFilePath = $csvFiles[$choice]
+                break
+            }
+            elseif ($choice -eq 'quit') {
+                exit
+            }
+            else {
+                Write-Host "Invalid choice. Please try again."
+            }
+        } while ($true)
+
+        # Read the header row from the new CSV file
+        $headerRow = Get-Content -Path $csvFilePath -TotalCount 1
+
+        # Display the header row to the user
+        Write-Host "CSV File Header: $headerRow"
+    }
+    elseif ($uploadChoice -eq '4') {
+        exit
+    }
+    else {
+        Write-Host "Invalid choice. Please try again."
+    }
+} while ($true)
