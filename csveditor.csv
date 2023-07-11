@@ -1,16 +1,45 @@
+function Write-HostCentered {
+    param (
+        [string]$Message,
+        [ConsoleColor]$Color
+    )
+
+    $paddingLength = ($host.ui.rawui.windowsize.width - $Message.Length) / 2
+    $padding = ' ' * [Math]::Floor($paddingLength)
+
+    Write-Host $padding -NoNewline
+    Write-Host $Message -ForegroundColor Cyan
+}
+
+function Write-HostCyanCentered {
+    param (
+        [string]$Message
+    )
+
+    Write-HostCentered -Message $Message -Color 'Cyan'
+}
+
+function Write-HostRedCentered {
+    param (
+        [string]$Message
+    )
+
+    Write-HostCentered -Message $Message -Color 'Red'
+}
+
 # Define the CSV file paths with labels
 $csvFiles = @{
-    "1" = "C:\Users\Manish\Documents\rotex.csv"
-    "2" = "C:\Users\Manish\Documents\csvedirot.csv"
+    "1" = "\\SANGANAK\C$\Users\Manish\Documents\rotex.csv"
+    "2" = "\\SANGANAK\C$\Users\Manish\Documents\csvedirot.csv"
     # Add more CSV files with labels as needed
 }
 
 # Prompt the user to choose which file to append the data to
 do {
-    Write-Host "Choose a CSV file to append data:"
-    $csvFiles.Keys | ForEach-Object { Write-Host "$_ : $($csvFiles[$_])" }
-	Write-Host "0 : Exit"
-    $choice = Read-Host "Enter the label of the CSV file OR '0' to exit)"
+    Write-HostCyanCentered "***** CHOOSE A CSV FILE *****"
+    $csvFiles.Keys | ForEach-Object { Write-HostCentered "$_ : $($csvFiles[$_])" 'Cyan' }
+    Write-HostCentered "0 : Exit"
+    $choice = Read-Host "Please select a number"
     if ($csvFiles.ContainsKey($choice)) {
         $csvFilePath = $csvFiles[$choice]
         break
@@ -19,22 +48,22 @@ do {
         exit
     }
     else {
-        Write-Host "Invalid choice. Please try again."
+        Write-HostRedCentered "Invalid choice. Please try again."
     }
 } while ($true)
 
 # Prompt the user for data entry or bulk upload
 do {
-    Write-Host "Choose an option:"
-    Write-Host "1. Bulk upload from a TXT file"
-    Write-Host "2. Enter data manually"
-	Write-Host "3. Choose another CSV file"
-	Write-Host "0. Exit"
-    $uploadChoice = Read-Host "Enter the choice OR '0' to exit"
+    Write-HostCyanCentered "***** CHOOSE AN OPTION *****"
+    Write-HostCentered "1. Bulk upload from a TXT file" 'Cyan'
+    Write-HostCentered "2. Enter data manually" 'Cyan'
+    Write-HostCentered "3. Choose another CSV file" 'Cyan'
+    Write-HostCentered "0. Exit" 'Cyan'
+    $uploadChoice = Read-Host "Please select a number"
 
     if ($uploadChoice -eq '1') {
         # Prompt the user for the TXT file path containing the data to append
-        $txtFilePath = Read-Host "Enter the path to the TXT file containing the data to append"
+        $txtFilePath = Read-Host "Please enter the text file path"
 
         # Read the header row from the TXT file
         $headerRow = Get-Content -Path $txtFilePath -TotalCount 1
@@ -81,10 +110,14 @@ do {
             $_ -replace '"', ''
         }
 
-        # Append the new rows to the chosen CSV file
-        $newRowsCsv | Select-Object -Skip 1 | Out-File -Append -FilePath $csvFilePath -Encoding UTF8
+        # Prepend the new rows with the current timestamp
+        $timestampRow = "##### $(Get-Date) #####"
+        $output = $timestampRow, ($newRowsCsv -join "`r`n")
 
-        Write-Host "Data appended to the CSV file: $csvFilePath"
+        # Append the new rows to the chosen CSV file
+        $output | Out-File -Append -FilePath $csvFilePath -Encoding UTF8
+
+        Write-HostCyanCentered "Data appended to the CSV file: $csvFilePath"
     }
     elseif ($uploadChoice -eq '2') {
         # Read the header row from the CSV file
@@ -98,7 +131,7 @@ do {
 
         # Prompt the user for input for each column
         foreach ($column in $columns) {
-            $value = Read-Host "Enter the value for $column"
+            $value = Read-Host "Enter value for the column $column"
             $newData[$column] = $value
         }
 
@@ -113,21 +146,25 @@ do {
             $_ -replace '"', ''
         }
 
-        # Append the new row to the chosen CSV file
-        $newRowCsv | Select-Object -Skip 1 | Out-File -Append -FilePath $csvFilePath -Encoding UTF8
+        # Prepend the new row with the current timestamp
+        $timestampRow = "##### $(Get-Date) #####"
+        $output = $timestampRow, ($newRowCsv -join "`r`n")
 
-        Write-Host "Data appended to the CSV file: $csvFilePath"
+        # Append the new row to the chosen CSV file
+        $output | Out-File -Append -FilePath $csvFilePath -Encoding UTF8
+
+        Write-HostCyanCentered "Data appended to the CSV file: $csvFilePath"
 
         # Exit after data entry
         exit
     }
-	elseif ($uploadChoice -eq '3') {
+    elseif ($uploadChoice -eq '3') {
         # Prompt the user to choose another CSV file
         do {
-            Write-Host "Choose a CSV file to append data:"
-			$csvFiles.Keys | ForEach-Object { Write-Host "$_ : $($csvFiles[$_])" }
-			Write-Host "0 : Exit"
-            $choice = Read-Host "Enter the label of the CSV file OR '0' to exit)"
+            Write-HostCyanCentered "***** CHOOSE A CSV FILE *****"
+            $csvFiles.Keys | ForEach-Object { Write-HostCentered "$_ : $($csvFiles[$_])" 'Cyan' }
+            Write-HostCentered "0 : Exit" 'Cyan'
+            $choice = Read-Host "Please enter the number"
             if ($csvFiles.ContainsKey($choice)) {
                 $csvFilePath = $csvFiles[$choice]
                 break
@@ -136,7 +173,7 @@ do {
                 exit
             }
             else {
-                Write-Host "Invalid choice. Please try again."
+                Write-HostCyanCentered "Invalid choice. Please try again."
             }
         } while ($true)
 
@@ -144,12 +181,12 @@ do {
         $headerRow = Get-Content -Path $csvFilePath -TotalCount 1
 
         # Display the header row to the user
-        Write-Host "CSV File Headers are : $headerRow"
+        Write-HostCyanCentered "CSV File Headers are : $headerRow"
     }
     elseif ($uploadChoice -eq '0') {
         exit
     }
     else {
-        Write-Host "Invalid choice. Please try again."
+        Write-HostCyanCentered "Invalid choice. Please try again."
     }
 } while ($true)
